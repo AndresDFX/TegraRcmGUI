@@ -1,0 +1,27 @@
+QFrame 
+{
+    border-radius: 10px; 
+    border-color: rgb(0, 0, 0);
+    background-color: rgb(41, 41, 41);
+    color: rgb(0, 0, 0);
+}
+QLabel 
+{
+    border-radius: 0px;
+    font: 8pt "Rubik";
+    background-color: rgb(41, 41, 41);
+    color: rgb(255, 255, 255);
+}
+QLineEdit
+{
+    border-color: rgb(0, 0, 0);
+    background-color: rgb(60, 60, 60);
+    font: 8pt "Rubik";
+    border-radius: 2px; 
+    color: rgb(255, 255, 255);
+}
+QToolTip
+{
+    background-color: rgb(30, 30, 30);
+    color: rgb(255, 255, 255);
+}

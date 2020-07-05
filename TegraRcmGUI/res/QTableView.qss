@@ -1,0 +1,11 @@
+QTableView
+{
+    border-radius: 10px;
+    color: rgb(255, 255, 255);
+    alternate-background-color: rgb(80, 80, 80);
+    background: rgb(41, 41, 41);
+    selection-background-color: rgb(30, 105, 98);
+    font: 8pt "Rubik";
+}
+
+

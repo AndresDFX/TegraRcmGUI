@@ -1,0 +1,37 @@
+QTabWidget::pane
+{
+    border-radius:10px;
+    background-color: rgb(60, 60, 60);   
+}
+QTabWidget::tab-bar
+{
+     left: 10px;      
+}
+QTabBar::tab
+{
+    color: rgb(255, 255, 255);
+    font: 9pt "Rubik";
+    border: 0px;
+    min-width: 10ex;
+    padding: 6px; /* Padding inside each tab */
+    font: 75 10pt "MS Shell Dlg 2";
+    color: rgb(255, 255, 255);
+    border-bottom: 2px solid grey;
+}
+QTabBar::tab:selected {
+    border-bottom: 2px solid white;
+}
+QLabel
+{
+    color: rgb(255, 255, 255);
+    font: 9pt "Rubik";
+}
+QToolTip
+{
+    background-color: rgb(30, 30, 30);
+    color: rgb(255, 255, 255);
+}
+QMessageBox QLabel {
+    color: rgb(0, 0, 0);
+}
+
