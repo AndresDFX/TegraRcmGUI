@@ -11,7 +11,9 @@ QKourou::QKourou(QWidget *parent, Kourou* device, TegraRcmGUI* gui) : QWidget(pa
     connect(this, SIGNAL(clb_error(int)), parent, SLOT(error(int)));
     connect(this, SIGNAL(clb_deviceStateChange()), parent, SLOT(on_deviceStateChange()));
     connect(this, SIGNAL(clb_finished(int)), parent, SLOT(on_Kourou_finished(int)));
-    connect(this, SIGNAL(pushMessage(QString)), parent, SLOT(pushMessage(QString)));
+    connect(this, SIGNAL(pushMessage(const QString)), parent, SLOT(pushMessage(const QString)));
+    connect(this, SIGNAL(sendStatusLbl(const QString)), gui->m_progressWidget, SLOT(setLabel(const QString)));
+    connect(this, SIGNAL(clb_close()), gui->m_progressWidget, SLOT(close()));
 }
 
 void QKourou::initDevice(bool silent, KLST_DEVINFO_HANDLE deviceInfo)
@@ -42,9 +44,12 @@ void QKourou::initDevice(bool silent, KLST_DEVINFO_HANDLE deviceInfo)
         if (!error && !b_autoInject && !m_device->arianeIsReady() && autoLaunchAriane && ariane_bin.size())
         {
             arianeIsLoading = true;
+            emit clb_deviceStateChange();
             error = m_device->hack((u8*)ariane_bin.data(), (u32)ariane_bin.size());
+            emit sendStatusLbl(tr("Retrieving device info..."));
+            QThread::msleep(1000); // Wait for Ariane to be fully loaded
             if (!error)
-                m_device->arianeIsReady_sync();
+                m_device->arianeIsReady_sync(); //waitUntilArianeReady();
 
             arianeIsLoading = false;
         }
@@ -57,34 +62,33 @@ void QKourou::initDevice(bool silent, KLST_DEVINFO_HANDLE deviceInfo)
         emit clb_finished(AUTO_INJECT);
 
     // Get device info if ariane is ready
-    if (m_device->arianeIsReady())
+    if (m_device->arianeIsReady())        
         devInfoSync = !(m_device->getDeviceInfo(&di));
 
+    if (devInfoSync) emit clb_deviceInfo(di);
+
+    /*
     // Read hekate_ipl.ini from device
     if (devInfoSync && di.cbl_hekate)
     {
         Bytes ini_file;
         u32 bytesRead = 0;
-        if(m_device->sdmmc_readFile("bootloader/hekate_ipl.ini", &ini_file, &bytesRead))
-            return;
+        if(!m_device->sdmmc_readFile("bootloader/hekate_ipl.ini", &ini_file, &bytesRead))
+        {
+            m_hekate_ini.clear();
+            m_hekate_ini.append(reinterpret_cast<const char*>(ini_file.data()), ini_file.size());
 
-        m_hekate_ini.clear();
-        m_hekate_ini.append(reinterpret_cast<const char*>(ini_file.data()), ini_file.size());
-
-
-        QTextStream hekate_ini(&m_hekate_ini);
-        QString line;
-        while (hekate_ini.readLineInto(&line))
-            qDebug() << line;
+            QTextStream hekate_ini(&m_hekate_ini);
+            QString line;
+            while (hekate_ini.readLineInto(&line))
+                qDebug() << line;
+        }
 
     }
-
+    */
     setLockEnabled(false);
-
-
-    emit clb_deviceStateChange();
-    if (devInfoSync) emit clb_deviceInfo(di);
-
+    emit clb_close();
+    emit clb_deviceStateChange();   
 }
 
 DWORD QKourou::autoInject()
@@ -157,9 +161,11 @@ void QKourou::hack(const char* payload_path, u8 *payload_buff, u32 buff_size)
     DWORD res = 0;
     setLockEnabled(true);
 
+    /*
     // Reboot if ariane is loaded
     if (m_device->arianeIsReady() && !rebootToRcm())
         res = GetLastError();
+    */
 
     // Push payload
     if(!res) res = payload_path != nullptr ? m_device->hack(payload_path) : m_device->hack(payload_buff, buff_size);
@@ -193,6 +199,7 @@ bool QKourou::rebootToRcm()
     if (!err)
     {
         m_device->disconnect();
+        m_device->resetCurrentBuffer();
         if(!waitUntilInit(3))
             err = RCM_REBOOT_FAILED;
     }
@@ -218,6 +225,17 @@ bool QKourou::waitUntilRcmReady(uint timeout_s)
 {
     qint64 begin_timestamp = QDateTime::currentSecsSinceEpoch();
     while(!m_device->deviceIsReady())
+    {
+        if (QDateTime::currentSecsSinceEpoch() > begin_timestamp + timeout_s)
+            return false;
+    }
+    return true;
+}
+
+bool QKourou::waitUntilArianeReady(bool skip_rcm, uint timeout_s)
+{
+    qint64 begin_timestamp = QDateTime::currentSecsSinceEpoch();
+    while(!m_device->arianeIsReady_sync(skip_rcm))
     {
         if (QDateTime::currentSecsSinceEpoch() > begin_timestamp + timeout_s)
             return false;
@@ -293,4 +311,94 @@ void QKourou::noDriverDeviceLookUp()
     }
     if (!found)
         m_APX_device_reconnect = true;
+}
+
+void QKourou::installSDFiles(QString input_path, qProgressWidget *pw, bool ini_replace)
+{
+    // Connects ProgressWidget slots
+    connect(this, SIGNAL(sendStatusLbl(const QString)), pw, SLOT(setLabel(const QString)));
+    connect(this, SIGNAL(clb_close()), pw, SLOT(close()));
+
+    auto exit = [&](int err)  {
+        setLockEnabled(false);
+        if (err)
+            emit clb_error(err);
+        emit clb_close();
+    };
+
+    emit sendStatusLbl(tr("Preparing files"));
+
+    bool is_dir = false;
+    if (QDir(input_path).exists())
+        is_dir = true;
+    else if (!QFile(input_path).exists())
+        return exit(BAD_ARGUMENT);
+
+    QStringList directories;
+    QStringList files;
+
+    if (is_dir)
+    {
+        QDir dir(input_path);
+        dir.setFilter(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
+        QDirIterator it(dir, QDirIterator::Subdirectories);
+        while (it.hasNext())
+        {
+            QString item = it.next();
+            if (QDir(item).exists())
+                directories << item;
+            else if (QFile(item).exists())
+                files << item;
+        }
+    }
+    else files << input_path;
+
+    if (!waitUntilUnlock())
+        return exit(ARIANE_NOT_READY);
+
+    setLockEnabled(true);
+
+    // Create dirs
+    for (QString dir : directories)
+    {
+        QString outdir = QString(dir).replace(input_path + "/", QString(""));
+        if (!m_device->sdmmc_isDir(outdir.toLocal8Bit().constData()))
+        {
+            if (!m_device->sdmmc_mkDir(outdir.toLocal8Bit().constData()))
+                return exit(FAILED_TO_MKDIR);
+        }
+    }
+
+    // Create files
+    for (QString file : files)
+    {
+        QString outfile = QString(file).replace(input_path + "/", QString(""));
+        emit sendStatusLbl(tr("Copying ") + outfile);
+        int res = m_device->sdmmc_writeFile(file.toLocal8Bit().constData(), outfile.toLocal8Bit().constData(), true);
+
+        if (res != QFile(file).size())
+        {
+            return exit(res ? res : SD_FILE_WRITE_FAILED);
+        }
+    }
+
+    emit sendStatusLbl(tr("Installation finished"));
+    QThread::msleep(1500);
+    return exit(SUCCESS);
+
+}
+
+void QKourou::getKeys()
+{
+    if (!waitUntilUnlock())
+        return;
+
+    if (!m_device->arianeIsReady_sync())
+        return;
+
+    UC_Header uc;
+    uc.command = GET_KEYS;
+    // Send command
+    m_device->write((const u8*)&uc, sizeof(uc));
+    QThread::msleep(500);
 }

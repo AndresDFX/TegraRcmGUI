@@ -337,7 +337,7 @@ font: 9pt &quot;Calibri&quot;;</string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">font: 75 9pt &quot;Rubik&quot;;</string>
+      <string notr="true">font: 75 8pt &quot;Rubik&quot;;</string>
      </property>
      <property name="text">
       <string>TegraRcmGUI v3.0-a by eliboa</string>
@@ -443,7 +443,7 @@ font: 9pt &quot;Calibri&quot;;</string>
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>60</y>
+       <y>100</y>
        <width>81</width>
        <height>20</height>
       </rect>
@@ -459,7 +459,7 @@ font: 9pt &quot;Calibri&quot;;</string>
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>80</y>
+       <y>120</y>
        <width>81</width>
        <height>20</height>
       </rect>
@@ -475,7 +475,7 @@ font: 9pt &quot;Calibri&quot;;</string>
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>100</y>
+       <y>140</y>
        <width>81</width>
        <height>20</height>
       </rect>
@@ -491,7 +491,7 @@ font: 9pt &quot;Calibri&quot;;</string>
      <property name="geometry">
       <rect>
        <x>100</x>
-       <y>100</y>
+       <y>140</y>
        <width>71</width>
        <height>20</height>
       </rect>
@@ -504,7 +504,7 @@ font: 9pt &quot;Calibri&quot;;</string>
      <property name="geometry">
       <rect>
        <x>100</x>
-       <y>80</y>
+       <y>120</y>
        <width>71</width>
        <height>20</height>
       </rect>
@@ -517,7 +517,7 @@ font: 9pt &quot;Calibri&quot;;</string>
      <property name="geometry">
       <rect>
        <x>100</x>
-       <y>60</y>
+       <y>100</y>
        <width>71</width>
        <height>20</height>
       </rect>
@@ -590,6 +590,85 @@ QProgressBar::chunk {
       <set>Qt::AlignCenter</set>
      </property>
     </widget>
+    <widget class="QLabel" name="firmwareSysLbl1">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>60</y>
+       <width>91</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Firmware (SYS):</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="firmwareSysLbl2">
+     <property name="geometry">
+      <rect>
+       <x>100</x>
+       <y>60</y>
+       <width>71</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">font: 10pt &quot;Calibri&quot;;</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <widget class="QLabel" name="firmwareEmuLbl2">
+     <property name="geometry">
+      <rect>
+       <x>100</x>
+       <y>80</y>
+       <width>71</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">font: 10pt &quot;Calibri&quot;;</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <widget class="QLabel" name="firmwareEmuLbl1">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>80</y>
+       <width>91</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Firmware (EMU):</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <zorder>batteryLbl</zorder>
+    <zorder>burntFusesLbl1</zorder>
+    <zorder>sdfsLbl1</zorder>
+    <zorder>fsTotSizeLbl1</zorder>
+    <zorder>fsFreeSpaceLbl1</zorder>
+    <zorder>fsFreeSpaceLbl2</zorder>
+    <zorder>fsTotSizeLbl2</zorder>
+    <zorder>sdfsLbl2</zorder>
+    <zorder>burntFusesLbl2</zorder>
+    <zorder>batteryLevel</zorder>
+    <zorder>firmwareSysLbl1</zorder>
+    <zorder>firmwareSysLbl2</zorder>
+    <zorder>firmwareEmuLbl2</zorder>
+    <zorder>firmwareEmuLbl1</zorder>
+    <zorder>devInfoDisableLbl</zorder>
    </widget>
    <zorder>statusBoxFrame</zorder>
    <zorder>tabWidget</zorder>

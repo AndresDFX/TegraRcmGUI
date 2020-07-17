@@ -6,6 +6,8 @@
 #include <QThread>
 #include "kourou/kourou.h"
 #include "tegrarcmgui.h"
+#include "qprogress_widget.h"
+
 
 typedef enum _qKourouAction : int
 {
@@ -17,6 +19,7 @@ typedef enum _qKourouAction : int
 
 
 class TegraRcmGUI;
+class qProgressWidget;
 
 ///
 /// \brief The QKourou class is a Qt thread safe reimplemented class of Kourou class, for TegraRcmGUI
@@ -48,6 +51,7 @@ private:
     void setLockEnabled(bool enable) { m_locked = enable; }
     bool waitUntilUnlock(uint timeout_s = 10);
     bool waitUntilRcmReady(uint timeout_s = 10);
+    bool waitUntilArianeReady(bool skip_rcm = false, uint timeout_s = 10);
     bool waitUntilInit(uint timeout_s = 10);
     bool rebootToRcm();
     DWORD autoInject();
@@ -60,6 +64,8 @@ public slots:
     void initNoDriverDeviceLookUpLoop();
     void noDriverDeviceLookUp();
     void setAutoRcmEnabled(bool state);
+    void installSDFiles(QString input_path, qProgressWidget *pw, bool ini_replace = false);
+    void getKeys();
 
 signals:
     void clb_deviceInfo(UC_DeviceInfo di);
@@ -67,7 +73,9 @@ signals:
     void clb_deviceStateChange();
     void clb_finished(int res);
     void clb_driverMissing();
-    void pushMessage(QString);
+    void pushMessage(const QString);
+    void sendStatusLbl(const QString);
+    void clb_close();
 };
 
 #endif // QKOUROU_H

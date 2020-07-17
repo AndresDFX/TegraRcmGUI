@@ -43,6 +43,8 @@ TegraRcmGUI::TegraRcmGUI(QWidget *parent)
     connect(trayIcon, &QSystemTrayIcon::activated, this, &TegraRcmGUI::trayIconActivated);
     trayIconMenu = trayIcon->contextMenu();
 
+    m_progressWidget = new qProgressWidget(parent);
+
     // Create a qKourou instance to invoke Kourou methods (asynchronously) using signals and slots
     m_kourou = new QKourou(this, &m_device, this);
 
@@ -191,6 +193,12 @@ void TegraRcmGUI::on_deviceStateChange()
     {
         arianeStatus.append(tr("LOADING"));
         arianeStyle = statusOffStyleSht;
+
+        if (!m_progressWidget->isVisible())
+        {
+            m_progressWidget->setLabel(tr("Loading Ariane..."));
+            m_progressWidget->exec();
+        }
     }
     else if (m_device.arianeIsReady())
     {
@@ -257,6 +265,8 @@ void TegraRcmGUI::clearDeviceInfo()
     ui->batteryLevel->hide();
     ui->batteryLevel->setValue(0);
     ui->burntFusesLbl2->setText("");
+    ui->firmwareSysLbl2->setText("");
+    ui->firmwareEmuLbl2->setText("");
     ui->sdfsLbl2->setText("");
     ui->sdfsLbl2->setText("");
     ui->fsTotSizeLbl2->setText("");
@@ -264,7 +274,9 @@ void TegraRcmGUI::clearDeviceInfo()
     if (!m_kourou->autoLaunchAriane)
     {
         ui->batteryLbl->hide();
-        ui->burntFusesLbl1->hide();
+        ui->firmwareSysLbl1->hide();
+        ui->firmwareEmuLbl1->hide();
+        ui->burntFusesLbl1->hide();        
         ui->sdfsLbl1->hide();
         ui->fsTotSizeLbl1->hide();
         ui->fsFreeSpaceLbl1->hide();
@@ -285,17 +297,21 @@ void TegraRcmGUI::on_deviceInfo_received(UC_DeviceInfo di)
     ui->batteryLevel->show();
     ui->batteryLevel->setValue(int(di.battery_capacity));
     ui->burntFusesLbl2->setText(QString().asprintf("%u", di.burnt_fuses));
+    ui->firmwareSysLbl1->show();
+    ui->firmwareEmuLbl1->show();
+    ui->firmwareSysLbl2->setText(QString(di.fw_version));
+    ui->firmwareEmuLbl2->setText(QString(di.emu_fw_version));
     ui->sdfsLbl2->setText(QString().asprintf("%s", di.sdmmc_initialized ? "Yes" : "No"));
     if (di.sdmmc_initialized)
     {
         QString fs;
-        if (di.emmc_fs_type == FS_FAT32) fs.append("FAT32");
-        else if (di.emmc_fs_type == FS_EXFAT) fs.append("exFAT");
+        if (di.mmc_fs_type == FS_FAT32) fs.append("FAT32");
+        else if (di.mmc_fs_type == FS_EXFAT) fs.append("exFAT");
         else fs.append("UNKNOWN");
         ui->sdfsLbl2->setText(fs);
 
-        qint64 fs_size = 0x200 * (qint64)di.emmc_fs_cl_size * ((qint64)di.emmc_fs_last_cl + 1);
-        qint64 fs_free_space = 0x200 * (qint64)di.emmc_fs_cl_size * (qint64)di.emmc_fs_free_cl;
+        qint64 fs_size = 0x200 * (qint64)di.mmc_fs_cl_size * ((qint64)di.mmc_fs_last_cl + 1);
+        qint64 fs_free_space = 0x200 * (qint64)di.mmc_fs_cl_size * (qint64)di.mmc_fs_free_cl;
         ui->fsTotSizeLbl2->setText(GetReadableSize(fs_size));
         ui->fsFreeSpaceLbl2->setText(GetReadableSize(fs_free_space));
     }
@@ -334,7 +350,7 @@ void TegraRcmGUI::error(int error)
         QMessageBox::critical(this, "Error", err_label);
 }
 
-void TegraRcmGUI::pushMessage(QString message)
+void TegraRcmGUI::pushMessage(const QString message)
 {
     // Send message from tray if app is not visible
     if (!isVisible())

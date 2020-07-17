@@ -15,12 +15,17 @@ public:
     explicit qProgressWidget(QWidget *parent = nullptr);
     ~qProgressWidget();
 
+public slots:
+    void setLabel(const QString label);
+
 private:
     Ui::qProgressWidget *ui;
     qint64 m_latest_activity;
 
 private slots:
     void check_activity();
+
+
 };
 
 #endif // QPROGRESS_WIDGET_H

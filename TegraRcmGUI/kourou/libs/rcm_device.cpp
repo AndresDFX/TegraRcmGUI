@@ -91,7 +91,7 @@ bool RcmDevice::initDevice(KLST_DEVINFO_HANDLE deviceInfo)
     m_devStatus = CONNECTED;
 
     // Set pipes timeout policy
-    u32 pipe_timeout = 2000; //ms
+    u32 pipe_timeout = 2500; //ms
     m_usbApi.SetPipePolicy(m_usbHandle, READ_PIPE_ID, PIPE_TRANSFER_TIMEOUT, sizeof(u32), &pipe_timeout);
     m_usbApi.SetPipePolicy(m_usbHandle, WRITE_PIPE_ID, PIPE_TRANSFER_TIMEOUT, sizeof(u32), &pipe_timeout);
 

@@ -50,9 +50,9 @@ void rcm_usb_device_reset_ep1(void)
 	rcm_transport->usb_device_reset_ep1();
 }
 
-static const char READY_NOTICE[] = "READY.\n";
+static const unsigned char READY_NOTICE[] = "READY.\n";
 void rcm_ready_notice()
 {
 	unsigned int b;
-	rcm_usb_device_write_ep1_in_sync(READY_NOTICE, 7, &b);
+    rcm_usb_device_write_ep1_in_sync(READY_NOTICE, 7, &b);
 }

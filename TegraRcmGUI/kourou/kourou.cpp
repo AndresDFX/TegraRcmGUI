@@ -39,6 +39,62 @@ bool Kourou::initDevice(KLST_DEVINFO_HANDLE deviceInfo)
     return m_rcm_ready;
 }
 
+int Kourou::hack(const char* payload_path)
+{
+    if (!arianeIsReady())
+        return RcmDevice::hack(payload_path);
+
+    ifstream userPayload(payload_path, ios::in | ios::binary | ios::ate);
+
+    if (!userPayload.is_open())
+        return OPEN_FILE_FAILED;
+
+    const auto userPayloadSize = int(userPayload.tellg());
+    if (userPayloadSize > PAYLOAD_MAX_SIZE)
+        return PAYLOAD_TOO_LARGE;
+
+    userPayload.seekg(0, ios::beg);
+    char *userPayloadBuffer = new char[userPayloadSize];
+    userPayload.read(&userPayloadBuffer[0], userPayloadSize);
+    bool error = !(userPayload) || int(userPayload.tellg()) != userPayloadSize;
+    userPayload.close();
+    if (error)
+    {
+        delete[] userPayloadBuffer;
+        return OPEN_FILE_FAILED;
+    }
+
+    int res = hack((u8*)userPayloadBuffer, (u32)userPayloadSize);
+
+    delete[] userPayloadBuffer;
+    return res;
+}
+
+int Kourou::hack(u8 *payload_buff, u32 buff_size)
+{
+    if (!arianeIsReady())
+        return RcmDevice::hack(payload_buff, buff_size);
+
+    UC_EXEC uc;
+    uc.command = PUSH_PAYLOAD;
+    uc.bin_size = buff_size;
+
+    if (write((const u8*)&uc, sizeof(uc)) != sizeof(uc))
+        return USB_WRITE_FAILED;
+
+    // Get response
+    bool response = false;
+    if (!readResponse(&response, sizeof(bool)) && !response)
+        return USB_WRITE_FAILED;
+
+    if (sendBinPackets((char*)payload_buff, buff_size) != buff_size)
+        return USB_WRITE_FAILED;
+
+    m_ariane_ready = false;
+
+    return SUCCESS;
+}
+
 void Kourou::disconnect()
 {
     RcmDevice::disconnect();
@@ -46,6 +102,50 @@ void Kourou::disconnect()
     m_ariane_ready = false;
     memset(&m_di, 0, sizeof(UC_DeviceInfo));
     m_di_set = false;
+}
+
+bool Kourou::sdmmc_isDir(const char* path)
+{
+    if (path == nullptr)
+        return false;
+
+    UC_SDIO uc;
+    uc.command = ISDIR_SD;
+    strcpy_s(uc.path, array_countof(uc.path), path);
+
+    if (write((const u8*)&uc, sizeof(uc)) != sizeof(uc))
+        return false;
+
+    u32 res = 0;
+    if (!readResponse(&res, sizeof(u32)))
+        return false;
+
+    if (res != 0)
+        return false;
+
+    return true;
+}
+
+bool Kourou::sdmmc_mkDir(const char* path)
+{
+    if (path == nullptr)
+        return false;
+
+    UC_SDIO uc;
+    uc.command = MKDIR_SD;
+    strcpy_s(uc.path, array_countof(uc.path), path);
+
+    if (write((const u8*)&uc, sizeof(uc)) != sizeof(uc))
+        return false;
+
+    u32 res = 0;
+    if (!readResponse(&res, sizeof(u32)))
+        return false;
+
+    if (res != 0)
+        return false;
+
+    return true;
 }
 
 u32 Kourou::sdmmc_fileSize(const char* path)
@@ -208,18 +308,21 @@ int Kourou::sdmmc_writeFile(const char* in_path, const char* out_path, bool crea
     // Create command
     memset(uc.path, 0, array_countof(uc.path));
     uc.command = WRITE_SD_FILE;
+    uc.create_always = create_always;
     strcpy_s(uc.path, array_countof(uc.path), out_path);
     uc.file_size = file.tellg();
     file.seekg(0, ios::beg);
+
+    // Allocate memory for file
+    fileMemBlock = new char[uc.file_size];
+    file.read(fileMemBlock, uc.file_size);
 
     // Send command to device
     int bytesSent = write((const u8*)&uc, sizeof(uc));
     if (bytesSent != sizeof(uc))
         return end(SEND_COMMAND_FAILED);
 
-    // Allocate memory for file
-    fileMemBlock = new char[uc.file_size];
-    file.read(fileMemBlock, uc.file_size);
+    //Sleep(100); // Make sure Ariane has enough time to open file
 
     return end(sendBinPackets(fileMemBlock, uc.file_size));
 }
@@ -239,7 +342,9 @@ int Kourou::sendBinPackets(char* buffer, u32 len)
         memcpy_s(&buf[32], bh.block_size, &buffer[curOffset], bh.block_size);
         u32 fbs = bh.block_size + 32;
 
-        if (write((const u8*)&buf[0], fbs) != int(fbs))
+        //if (write((const u8*)&buf[0], fbs) != int(fbs))
+        int res = write((const u8*)&buf[0], USB_BUFFER_LENGTH);
+        if (res != USB_BUFFER_LENGTH)
             return USB_WRITE_FAILED;
 
         // Get confirmation
@@ -250,8 +355,9 @@ int Kourou::sendBinPackets(char* buffer, u32 len)
             return USB_WRITE_FAILED;
 
         bytesRemaining -= bh.block_size;
+        curOffset += bh.block_size;
     }
-    return int(len);
+    return int(len - bytesRemaining);
 }
 
 bool Kourou::readResponse(void* buffer, u32 size)
@@ -291,19 +397,22 @@ bool Kourou::sendResponse(void* buffer, u32 size)
     return true;
 }
 
-bool Kourou::arianeIsReady_sync()
+bool Kourou::arianeIsReady_sync(bool skip_rcm)
 {
     auto end = [&](bool ready) {
         m_ariane_ready = ready;
         return ready;
     };
 
-    if (RcmDevice::deviceIsReady())
+    if (!skip_rcm)
     {
-        m_rcm_ready = true;
-        return end(false);
+        if (RcmDevice::deviceIsReady())
+        {
+            m_rcm_ready = true;
+            return end(false);
+        }
+        else m_rcm_ready = false;
     }
-    else m_rcm_ready = false;
 
     u8 buff[0x10];
     static const char READY_INDICATOR[] = "READY.\n";

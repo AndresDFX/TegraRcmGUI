@@ -11,12 +11,14 @@
 #include "kourou/kourou.h"
 #include "kourou/usb_command.h"
 #include "qkourou.h"
+#include "qprogress_widget.h"
 
 class QPayloadWidget;
 class qHekate;
 class qTools;
 class qSettings;
 class QKourou;
+class qProgressWidget;
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class TegraRcmGUI; }
@@ -43,6 +45,7 @@ public:
     qHekate *hekateTab;
     qTools *toolsTab;
     qSettings *settingsTab;
+    qProgressWidget *m_progressWidget;
     bool enableWidget(QWidget *widget, bool enable);
     void changeEvent(QEvent* e) override;
 
@@ -59,7 +62,7 @@ public slots:
     void deviceInfoTimer();
     void error(int error);
     void on_deviceStateChange();
-    void pushMessage(QString message);
+    void pushMessage(const QString message);
 
 signals:
     void sign_hotPlugEvent(bool added, KLST_DEVINFO_HANDLE);

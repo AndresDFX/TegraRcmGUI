@@ -35,3 +35,9 @@ void qProgressWidget::check_activity()
     if (now > m_latest_activity + 5)
         close();
 }
+
+void qProgressWidget::setLabel(const QString label)
+{
+    ui->label->setText(label);
+    m_latest_activity = QDateTime::currentSecsSinceEpoch();
+}

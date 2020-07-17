@@ -38,7 +38,6 @@ QPayloadWidget::QPayloadWidget(TegraRcmGUI *parent) : QWidget(parent)
         item.at(i)->setStatusTip("test");
     }
 
-
     // Timers
     QTimer *payloadBtnStatus_timer = new QTimer(this);
     connect(payloadBtnStatus_timer, SIGNAL(timeout()), this, SLOT(payloadBtnStatusTimer()));
